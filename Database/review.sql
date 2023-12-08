@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS Reviews (
 );
 
 CREATE TABLE IF NOT EXISTS reviews_photos (
-    iid INT unsigned NOT NULL PRIMARY KEY,
+    id INT unsigned NOT NULL PRIMARY KEY,
     review_id INT unsigned,
     url VARCHAR(255),
     FOREIGN KEY (review_id) REFERENCES Reviews(id)

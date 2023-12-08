@@ -25,41 +25,22 @@ db.connect(err => {
 
 
 
-function timestampToDatetime(timestamp) {
+function convertTimestampToMySQLDateTime(timestamp) {
     return new Date(parseInt(timestamp)).toISOString().slice(0, 19).replace('T', ' ');
 }
 
-function dbQuery(tableName, rows) {
+function dbQuery(sql, params) {
     return new Promise((resolve, reject) => {
-        
-        if (!rows.length || typeof rows[0] !== 'object') {
-            return reject(new Error('Invalid data format for insertion'));
-        }
-
-        
-        const columns = Object.keys(rows[0]);
-        const columnSql = columns.join(', ');
-
-        
-        const valuesSql = rows.map(row => {
-            const values = columns.map(column => mysql.escape(row[column]));
-            return `(${values.join(', ')})`;
-        }).join(', ');
-
-        
-        const sql = `INSERT INTO ${tableName} (${columnSql}) VALUES ${valuesSql}`;
-
-        db.query(sql, (error) => {
+        db.query(sql, params, (error, results) => {
             if (error) {
-                console.error('Error inserting data:', error);
+                console.error('Error executing query:', error);
                 reject(error);
             } else {
-                resolve();
+                resolve(results);
             }
         });
     });
 }
-
 
 function loadCsvData(path, tableName) {
     const rowsToInsert = [];
@@ -69,13 +50,32 @@ function loadCsvData(path, tableName) {
         const stream = fs.createReadStream(path).pipe(csv());
 
         stream.on('data', (row) => {
+            if (row.date) {
+                row.date = convertTimestampToMySQLDateTime(row.date);
+            }
+            if (row.recommend !== undefined) {
+                row.recommend = row.recommend === 'true' ? 1 : 0;
+            }
+            if (row.reported !== undefined) {
+                row.reported = row.reported === 'true' ? 1 : 0;
+            }
             rowsToInsert.push(row);
 
             if (rowsToInsert.length >= batchSize) {
                 stream.pause(); 
 
-                const sql = `INSERT INTO ${tableName} SET ?`;
-                dbQuery(sql, rowsToInsert)
+
+                const columns = Object.keys(rowsToInsert[0]);
+                const columnSql = columns.join(', ');
+
+                const valuesSql = rowsToInsert.map(row => {
+                    const values = columns.map(column => mysql.escape(row[column]));
+                    return `(${values.join(', ')})`;
+                }).join(', ');
+
+                const sql = `INSERT INTO ${tableName} (${columnSql}) VALUES ${valuesSql}`;
+
+                dbQuery(sql, [])
                     .then(() => {
                         rowsToInsert.length = 0; 
                         stream.resume(); 
@@ -85,8 +85,17 @@ function loadCsvData(path, tableName) {
         })
         .on('end', () => {
             if (rowsToInsert.length > 0) {
-                const sql = `INSERT INTO ${tableName} SET ?`;
-                dbQuery(sql, rowsToInsert)
+                const columns = Object.keys(rowsToInsert[0]);
+                const columnSql = columns.join(', ');
+
+                const valuesSql = rowsToInsert.map(row => {
+                    const values = columns.map(column => mysql.escape(row[column]));
+                    return `(${values.join(', ')})`;
+                }).join(', ');
+
+                const sql = `INSERT INTO ${tableName} (${columnSql}) VALUES ${valuesSql}`;
+
+                dbQuery(sql, [])
                     .then(resolve)
                     .catch(reject);
             } else {
@@ -95,6 +104,8 @@ function loadCsvData(path, tableName) {
         });
     });
 }
+
+
 
 app.get('/importCsv', async (req, res) => {
     try {
@@ -187,17 +198,35 @@ app.get('/reviews', (req, res) => {
     });
 });
 
-app.post('/reviews', (req, res) => {
-    const { product_id, rating, summary, body, recommend, reviewer_name, reviewer_email } = req.body;
-    const query = 'INSERT INTO Reviews (product_id, rating, summary, body, recommend, reviewer_name, reviewer_email, date, helpfulness, photo_urls, characteristic_values) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 0)';
-    
-    db.query(query, [product_id, rating, summary, body, recommend, reviewer_name, reviewer_email], (err, result) => {
-        if (err) {
-            return res.status(500).send(err);
+app.post('/reviews', async (req, res) => {
+    const { product_id, rating, summary, body, recommend, reviewer_name, reviewer_email, photos, characteristics } = req.body;
+
+    try {
+
+        const reviewQuery = 'INSERT INTO Reviews (product_id, rating, summary, body, recommend, reviewer_name, reviewer_email, date, helpfulness) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 0)';
+        const reviewResult = await dbQuery(reviewQuery, [product_id, rating, summary, body, recommend, reviewer_name, reviewer_email]);
+        const reviewId = reviewResult.insertId;
+
+
+        if (photos && photos.length) {
+            const photoQuery = 'INSERT INTO reviews_photos (review_id, url) VALUES ?';
+            const photoValues = photos.map(url => [reviewId, url]);
+            await dbQuery(photoQuery, [photoValues]);
         }
-        res.status(201).json({ message: 'Review added', reviewId: result.insertId });
-    });
+
+        if (characteristics && Object.keys(characteristics).length) {
+            const characteristicQuery = 'INSERT INTO characteristic_reviews (review_id, characteristic_id, value) VALUES ?';
+            const characteristicValues = Object.entries(characteristics).map(([characteristic_id, value]) => [reviewId, characteristic_id, value]);
+            await dbQuery(characteristicQuery, [characteristicValues]);
+        }
+
+        res.status(201).json({ message: 'Review and associated data added', reviewId: reviewId });
+    } catch (err) {
+        console.error('Error inserting review data:', err);
+        res.status(500).send('Error inserting review data.');
+    }
 });
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
