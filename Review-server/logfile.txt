@@ -1,0 +1,6 @@
+
+> review-server@1.0.0 start
+> node --max-old-space-size=8192 Review-server/index.js
+
+Server running on port 3000
+Database connected...
