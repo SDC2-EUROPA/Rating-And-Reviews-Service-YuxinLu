@@ -8,6 +8,7 @@ app.use(express.json());
 
 
 const db = mysql.createConnection({
+    connectionLimit: 101,
     host: 'localhost',
     user: 'root',
     password: 'Luyuxin0715',
@@ -15,12 +16,12 @@ const db = mysql.createConnection({
 });
 
 
-db.connect(err => {
-    if (err) {
-        throw err;
-    }
-    console.log('Database connected...');
-});
+// db.connect(err => {
+//     if (err) {
+//         throw err;
+//     }
+//     console.log('Database connected...');
+// });
 
 
 
@@ -31,16 +32,24 @@ function convertTimestampToMySQLDateTime(timestamp) {
 
 function dbQuery(sql, params) {
     return new Promise((resolve, reject) => {
-        db.query(sql, params, (error, results) => {
-            if (error) {
-                console.error('Error executing query:', error);
-                reject(error);
-            } else {
-                resolve(results);
+        pool.getConnection((err, connection) => {
+            if (err) {
+                reject(err);
+                return;
             }
+            connection.query(sql, params, (error, results) => {
+                connection.release();
+                if (error) {
+                    console.error('Error executing query:', error);
+                    reject(error);
+                } else {
+                    resolve(results);
+                }
+            });
         });
     });
 }
+
 
 function loadCsvData(path, tableName) {
     const rowsToInsert = [];
@@ -63,7 +72,6 @@ function loadCsvData(path, tableName) {
 
             if (rowsToInsert.length >= batchSize) {
                 stream.pause(); 
-
 
                 const columns = Object.keys(rowsToInsert[0]);
                 const columnSql = columns.join(', ');
