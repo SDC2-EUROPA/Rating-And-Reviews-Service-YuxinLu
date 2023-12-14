@@ -118,11 +118,11 @@ function loadCsvData(path, tableName) {
 
 app.get('/importCsv', async (req, res) => {
     try {
-       await  loadCsvData('/Users/yuxinlu/Desktop/data/product.csv', 'Products');
-       await loadCsvData('/Users/yuxinlu/Desktop/data/reviews.csv', 'Reviews')
-         await loadCsvData('/Users/yuxinlu/Desktop/data/reviews_photos.csv', 'reviews_photos');
-         await loadCsvData('/Users/yuxinlu/Desktop/data/characteristics.csv', 'Characteristics');
-         await loadCsvData('/Users/yuxinlu/Desktop/data/characteristic_reviews.csv', 'characteristic_reviews');
+        await loadCsvData('/Users/yuxinlu/Desktop/data/product.csv', 'Products');
+        await loadCsvData('/Users/yuxinlu/Desktop/data/reviews.csv', 'Reviews');
+        await loadCsvData('/Users/yuxinlu/Desktop/data/reviews_photos.csv', 'reviews_photos');
+        await loadCsvData('/Users/yuxinlu/Desktop/data/characteristics.csv', 'Characteristics');
+        await loadCsvData('/Users/yuxinlu/Desktop/data/characteristic_reviews.csv', 'characteristic_reviews');
 
         res.send('CSV data imported.');
     } catch (error) {
