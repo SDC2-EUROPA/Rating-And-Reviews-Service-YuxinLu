@@ -8,8 +8,7 @@ require('dotenv').config();
 app.use(express.json());
 
 
-const pool = mysql.createPool({
-    connectionLimit: 10,
+const pool = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -18,12 +17,12 @@ const pool = mysql.createPool({
 
 
 
-// db.connect(err => {
-//     if (err) {
-//         throw err;
-//     }
-//     console.log('Database connected...');
-// });
+db.connect(err => {
+    if (err) {
+        throw err;
+    }
+    console.log('Database connected...');
+});
 
 
 
@@ -34,20 +33,13 @@ function convertTimestampToMySQLDateTime(timestamp) {
 
 function dbQuery(sql, params) {
     return new Promise((resolve, reject) => {
-        pool.getConnection((err, connection) => {
-            if (err) {
-                reject(err);
-                return;
+        db.query(sql, params, (error, results) => {
+            if (error) {
+                console.error('Error executing query:', error);
+                reject(error);
+            } else {
+                resolve(results);
             }
-            connection.query(sql, params, (error, results) => {
-                connection.release();
-                if (error) {
-                    console.error('Error executing query:', error);
-                    reject(error);
-                } else {
-                    resolve(results);
-                }
-            });
         });
     });
 }
