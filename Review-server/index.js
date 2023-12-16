@@ -44,68 +44,97 @@ function dbQuery(sql, params) {
     });
 }
 
+function loadCsvDataUsingLoadDataInfile(path, tableName) {
+    let sql = `
+        LOAD DATA LOCAL INFILE '${path}'
+        INTO TABLE ${tableName}
+        FIELDS TERMINATED BY ','
+        ENCLOSED BY '"'
+        LINES TERMINATED BY '\n'
+        IGNORE 1 LINES
+    `;
 
-function loadCsvData(path, tableName) {
-    const rowsToInsert = [];
-    const batchSize = 1000; 
+    if (tableName === 'Reviews') {
+        sql += `
+            (@col1, @col2, @col3, @col4, @col5, @col6, @col7, @col8, @col9, @col10)
+            SET
+            product_id = @col1,
+            rating = @col2,
+            date = FROM_UNIXTIME(@col3),
+            summary = @col4,
+            body = @col5,
+            recommend = @col6 = 'true',
+            reported = @col7 = 'true',
+            reviewer_name = @col8,
+            reviewer_email = @col9,
+            helpfulness = @col10
+        `;
+    }
 
-    return new Promise((resolve, reject) => {
-        const stream = fs.createReadStream(path).pipe(csv());
-
-        stream.on('data', (row) => {
-            if (row.date) {
-                row.date = convertTimestampToMySQLDateTime(row.date);
-            }
-            if (row.recommend !== undefined) {
-                row.recommend = row.recommend === 'true' ? 1 : 0;
-            }
-            if (row.reported !== undefined) {
-                row.reported = row.reported === 'true' ? 1 : 0;
-            }
-            rowsToInsert.push(row);
-
-            if (rowsToInsert.length >= batchSize) {
-                stream.pause(); 
-
-                const columns = Object.keys(rowsToInsert[0]);
-                const columnSql = columns.join(', ');
-
-                const valuesSql = rowsToInsert.map(row => {
-                    const values = columns.map(column => mysql.escape(row[column]));
-                    return `(${values.join(', ')})`;
-                }).join(', ');
-
-                const sql = `INSERT INTO ${tableName} (${columnSql}) VALUES ${valuesSql}`;
-
-                dbQuery(sql, [])
-                    .then(() => {
-                        rowsToInsert.length = 0; 
-                        stream.resume(); 
-                    })
-                    .catch(reject);
-            }
-        })
-        .on('end', () => {
-            if (rowsToInsert.length > 0) {
-                const columns = Object.keys(rowsToInsert[0]);
-                const columnSql = columns.join(', ');
-
-                const valuesSql = rowsToInsert.map(row => {
-                    const values = columns.map(column => mysql.escape(row[column]));
-                    return `(${values.join(', ')})`;
-                }).join(', ');
-
-                const sql = `INSERT INTO ${tableName} (${columnSql}) VALUES ${valuesSql}`;
-
-                dbQuery(sql, [])
-                    .then(resolve)
-                    .catch(reject);
-            } else {
-                resolve();
-            }
-        });
-    });
+    return dbQuery(sql, []);
 }
+
+// function loadCsvData(path, tableName) {
+//     const rowsToInsert = [];
+//     const batchSize = 1000; 
+
+//     return new Promise((resolve, reject) => {
+//         const stream = fs.createReadStream(path).pipe(csv());
+
+//         stream.on('data', (row) => {
+//             if (row.date) {
+//                 row.date = convertTimestampToMySQLDateTime(row.date);
+//             }
+//             if (row.recommend !== undefined) {
+//                 row.recommend = row.recommend === 'true' ? 1 : 0;
+//             }
+//             if (row.reported !== undefined) {
+//                 row.reported = row.reported === 'true' ? 1 : 0;
+//             }
+//             rowsToInsert.push(row);
+
+//             if (rowsToInsert.length >= batchSize) {
+//                 stream.pause(); 
+
+//                 const columns = Object.keys(rowsToInsert[0]);
+//                 const columnSql = columns.join(', ');
+
+//                 const valuesSql = rowsToInsert.map(row => {
+//                     const values = columns.map(column => mysql.escape(row[column]));
+//                     return `(${values.join(', ')})`;
+//                 }).join(', ');
+
+//                 const sql = `INSERT INTO ${tableName} (${columnSql}) VALUES ${valuesSql}`;
+
+//                 dbQuery(sql, [])
+//                     .then(() => {
+//                         rowsToInsert.length = 0; 
+//                         stream.resume(); 
+//                     })
+//                     .catch(reject);
+//             }
+//         })
+//         .on('end', () => {
+//             if (rowsToInsert.length > 0) {
+//                 const columns = Object.keys(rowsToInsert[0]);
+//                 const columnSql = columns.join(', ');
+
+//                 const valuesSql = rowsToInsert.map(row => {
+//                     const values = columns.map(column => mysql.escape(row[column]));
+//                     return `(${values.join(', ')})`;
+//                 }).join(', ');
+
+//                 const sql = `INSERT INTO ${tableName} (${columnSql}) VALUES ${valuesSql}`;
+
+//                 dbQuery(sql, [])
+//                     .then(resolve)
+//                     .catch(reject);
+//             } else {
+//                 resolve();
+//             }
+//         });
+//     });
+// }
 
 
 
