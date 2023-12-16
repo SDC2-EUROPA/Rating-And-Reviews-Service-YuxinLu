@@ -44,7 +44,7 @@ function dbQuery(sql, params) {
     });
 }
 
-function loadCsvDataUsingLoadDataInfile(path, tableName) {
+function loadCsvData(path, tableName) {
     let sql = `
         LOAD DATA LOCAL INFILE '${path}'
         INTO TABLE ${tableName}
