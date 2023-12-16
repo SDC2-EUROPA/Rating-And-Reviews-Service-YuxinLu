@@ -12,7 +12,8 @@ const db = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE
+    database: process.env.DB_DATABASE,
+    localInfile: true
 });
 
 
@@ -141,10 +142,10 @@ function loadCsvData(path, tableName) {
 app.get('/importCsv', async (req, res) => {
     try {
         await loadCsvData('/home/ubuntu/myexpressapp/data/product.csv', 'Products');
-        await loadCsvData('/home/ubuntu/myexpressapp/data/reviews.csv', 'Reviews');
-        await loadCsvData('/home/ubuntu/myexpressapp/data/reviews_photos.csv', 'reviews_photos');
-        await loadCsvData('/home/ubuntu/myexpressapp/data/characteristics.csv', 'Characteristics');
-        await loadCsvData('/home/ubuntu/myexpressapp/data/characteristic_reviews.csv', 'characteristic_reviews');
+        // await loadCsvData('/home/ubuntu/myexpressapp/data/reviews.csv', 'Reviews');
+        // await loadCsvData('/home/ubuntu/myexpressapp/data/reviews_photos.csv', 'reviews_photos');
+        // await loadCsvData('/home/ubuntu/myexpressapp/data/characteristics.csv', 'Characteristics');
+        // await loadCsvData('/home/ubuntu/myexpressapp/data/characteristic_reviews.csv', 'characteristic_reviews');
         
         res.send('CSV data imported.');
     } catch (error) {
