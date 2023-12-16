@@ -55,22 +55,22 @@ function loadCsvData(path, tableName) {
         IGNORE 1 LINES
     `;
 
-    if (tableName === 'Reviews') {
-        sql += `
-            (@col1, @col2, @col3, @col4, @col5, @col6, @col7, @col8, @col9, @col10)
-            SET
-            product_id = @col1,
-            rating = @col2,
-            date = FROM_UNIXTIME(@col3),
-            summary = @col4,
-            body = @col5,
-            recommend = @col6 = 'true',
-            reported = @col7 = 'true',
-            reviewer_name = @col8,
-            reviewer_email = @col9,
-            helpfulness = @col10
-        `;
-    }
+    // if (tableName === 'Reviews') {
+    //     sql += `
+    //         (@col1, @col2, @col3, @col4, @col5, @col6, @col7, @col8, @col9, @col10)
+    //         SET
+    //         product_id = @col1,
+    //         rating = @col2,
+    //         date = FROM_UNIXTIME(@col3),
+    //         summary = @col4,
+    //         body = @col5,
+    //         recommend = @col6 = 'true',
+    //         reported = @col7 = 'true',
+    //         reviewer_name = @col8,
+    //         reviewer_email = @col9,
+    //         helpfulness = @col10
+    //     `;
+    // }
 
     return dbQuery(sql, []);
 }
